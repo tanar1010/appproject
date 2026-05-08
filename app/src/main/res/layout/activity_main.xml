@@ -7,6 +7,7 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <!-- 메인 화면 콘텐츠 영역 -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -17,10 +18,11 @@
             android:layout_height="?attr/actionBarSize"
             android:background="#6200EE"
             android:elevation="4dp"
-            app:title="날씨 앱 테스트"
+            app:title="날씨 앱"
             app:titleTextColor="#FFFFFF"
-            app:navigationIcon="@drawable/ic_menu"
+            app:navigationIcon="@android:drawable/ic_menu_sort_by_size"
             app:layout_constraintTop_toTopOf="parent" />
+
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -32,7 +34,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:text="상단 햄버거 버튼을 눌러\n메뉴를 열어보세요."
+                android:text="왼쪽 상단 버튼을 눌러\n날씨 정보를 확인하세요."
                 android:gravity="center"
                 android:textSize="18sp"
                 android:textColor="#333333" />
@@ -40,41 +42,79 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- 사이드 메뉴(Drawer) 영역 -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/nav_view"
-        android:layout_width="wrap_content"
+        android:layout_width="280dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="#FFFFFF">
 
         <LinearLayout
-            android:layout_width="200dp"
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <TextView
+            <!-- [수정됨] 날씨 정보가 표시될 헤더 영역 -->
+            <LinearLayout
+                android:id="@+id/nav_header"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:background="#E0E0E0"
+                android:layout_height="180dp"
+                android:background="#6200EE"
                 android:gravity="center"
-                android:text="날씨"
-                android:textColor="#000000"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+                android:orientation="vertical"
+                android:padding="20dp">
 
-            <Button android:id="@+id/btn1" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="기능 1 (날씨)" style="?android:attr/borderlessButtonStyle" android:layout_marginTop="10dp"/>
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#CCCCCC" android:layout_marginHorizontal="10dp"/>
+                <TextView
+                    android:id="@+id/tv_menu_temp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="--°"
+                    android:textColor="#FFFFFF"
+                    android:textSize="45sp"
+                    android:textStyle="bold" />
 
-            <Button android:id="@+id/btn2" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="기능 2" style="?android:attr/borderlessButtonStyle"/>
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#CCCCCC" android:layout_marginHorizontal="10dp"/>
+                <TextView
+                    android:id="@+id/tv_menu_desc"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="위치 확인 중..."
+                    android:textColor="#FFFFFF"
+                    android:textSize="16sp"
+                    android:layout_marginTop="8dp"/>
+            </LinearLayout>
 
-            <Button android:id="@+id/btn3" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="기능 3" style="?android:attr/borderlessButtonStyle"/>
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#CCCCCC" android:layout_marginHorizontal="10dp"/>
+            <!-- 메뉴 버튼 리스트 -->
+            <ScrollView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
 
-            <Button android:id="@+id/btn4" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="기능 4" style="?android:attr/borderlessButtonStyle"/>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="10dp">
 
+                    <Button android:id="@+id/btn1" android:layout_width="match_parent" android:layout_height="60dp" android:text="실시간 날씨 갱신" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDDDDD" />
+
+                    <Button android:id="@+id/btn2" android:layout_width="match_parent" android:layout_height="60dp" android:text="미세먼지 정보" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDDDDD" />
+
+                    <Button android:id="@+id/btn3" android:layout_width="match_parent" android:layout_height="60dp" android:text="내일 예보" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDDDDD" />
+
+                    <Button android:id="@+id/btn4" android:layout_width="match_parent" android:layout_height="60dp" android:text="전국 날씨" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDDDDD" />
+
+                    <Button android:id="@+id/btn5" android:layout_width="match_parent" android:layout_height="60dp" android:text="알림 설정" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDDDDD" />
+
+                    <Button android:id="@+id/btn6" android:layout_width="match_parent" android:layout_height="60dp" android:text="앱 정보" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
+
+                </LinearLayout>
+            </ScrollView>
         </LinearLayout>
-
     </com.google.android.material.navigation.NavigationView>
 
 </androidx.drawerlayout.widget.DrawerLayout>
