@@ -55,14 +55,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkPermissionAndGetWeather() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
             getCurrentLocation()
         } else {
             // 권한이 없으면 요청
-            locationPermissionRequest.launch(arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ))
+            locationPermissionRequest.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 
@@ -118,6 +124,7 @@ class MainActivity : AppCompatActivity() {
                 baseDate = dateSdf.format(cal.time)
                 "2300"
             }
+
             hour < 5 || (hour == 5 && min < 15) -> "0200"
             hour < 8 || (hour == 8 && min < 15) -> "0500"
             hour < 11 || (hour == 11 && min < 15) -> "0800"
@@ -140,7 +147,10 @@ class MainActivity : AppCompatActivity() {
             nx = nx,
             ny = ny
         ).enqueue(object : Callback<WeatherResponse> {
-            override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>) {
+            override fun onResponse(
+                call: Call<WeatherResponse>,
+                response: Response<WeatherResponse>
+            ) {
                 if (response.isSuccessful) {
                     val weatherResponse = response.body()
                     val resultCode = weatherResponse?.response?.header?.resultCode
@@ -148,7 +158,9 @@ class MainActivity : AppCompatActivity() {
                     if (resultCode == "00") {
                         val items = weatherResponse.response.body?.items?.item
                         // T1H(초단기 기온) 또는 TMP(단기 기온)
-                        val temp = items?.find { it.category == "TMP" || it.category == "T1H" }?.fcstValue ?: "--"
+                        val temp =
+                            items?.find { it.category == "TMP" || it.category == "T1H" }?.fcstValue
+                                ?: "--"
                         val sky = items?.find { it.category == "SKY" }?.fcstValue ?: "1"
 
                         val skyText = when (sky) {
@@ -174,16 +186,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupMenuButtons() {
-        val btnIds = arrayOf(R.id.btn1, R.id.btn2, R.id.btn3, R.id.btn4, R.id.btn5, R.id.btn6)
-        for (i in btnIds.indices) {
-            findViewById<Button>(btnIds[i])?.setOnClickListener {
-                dataDisplay.text = "기능 ${i + 1} 실행 중"
-                drawerLayout.closeDrawer(GravityCompat.START)
-            }
+        val mealManager = MealManager(dataDisplay) // 매니저 생성
+
+        // 2번 버튼 클릭 시
+        findViewById<Button>(R.id.btn2)?.setOnClickListener {
+            mealManager.fetchTodayMeal() // 한 줄로 실행!
+            drawerLayout.closeDrawer(GravityCompat.START)
         }
     }
 }
-
 // 좌표 변환 객체 (MainActivity.kt 파일 하단에 포함)
 object TransLocal {
     fun convertGrid(lat: Double, lon: Double): Pair<Int, Int> {
@@ -198,7 +209,8 @@ object TransLocal {
 
         val DEGRAD = Math.PI / 180.0
         val re = RE / GRID
-        val sn = Math.tan(Math.PI * 0.25 + SLAT2 * DEGRAD * 0.5) / Math.tan(Math.PI * 0.25 + SLAT1 * DEGRAD * 0.5)
+        val sn =
+            Math.tan(Math.PI * 0.25 + SLAT2 * DEGRAD * 0.5) / Math.tan(Math.PI * 0.25 + SLAT1 * DEGRAD * 0.5)
         val sn_val = Math.log(Math.cos(SLAT1 * DEGRAD) / Math.cos(SLAT2 * DEGRAD)) / Math.log(sn)
         val sf = Math.tan(Math.PI * 0.25 + SLAT1 * DEGRAD * 0.5)
         val sf_val = Math.pow(sf, sn_val) * Math.cos(SLAT1 * DEGRAD) / sn_val
