@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme. -->
+    <!-- parent를 AppCompat 계열로 수정하여 Activity 크래시를 해결합니다. -->
+    <style name="Theme.MyApplication" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
+        <!-- 앱의 주요 색상 설정 (원하시는 색으로 변경 가능) -->
+        <!-- 기본 보라색 계열 설정 예시 -->
+        <item name="colorPrimary">#6200EE</item>
+        <item name="colorPrimaryDark">#3700B3</item>
+        <item name="colorAccent">#03DAC5</item>
+
+        <!-- 상태바 색상 등 추가 설정 -->
+        <item name="android:statusBarColor" tools:targetApi="l" xmlns:tools="http://schemas.android.com/tools">?attr/colorPrimaryDark</item>
+    </style>
+</resources>
