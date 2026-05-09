@@ -186,11 +186,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupMenuButtons() {
-        val mealManager = MealManager(dataDisplay) // 매니저 생성
+        val mealManager = MealManager(dataDisplay)
+        val timetableManager = TimetableManager(dataDisplay) // 새 시간표 매니저
 
-        // 2번 버튼 클릭 시
+        // 2번 버튼: 기존 급식 기능
         findViewById<Button>(R.id.btn2)?.setOnClickListener {
-            mealManager.fetchTodayMeal() // 한 줄로 실행!
+            mealManager.fetchTodayMeal()
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+
+        // 3번 버튼: 나이스 시간표 기능
+        findViewById<Button>(R.id.btn3)?.setOnClickListener {
+            timetableManager.fetchTimetable()
             drawerLayout.closeDrawer(GravityCompat.START)
         }
     }
