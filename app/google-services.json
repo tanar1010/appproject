@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "514965375276",
+    "firebase_url": "https://shcool-388a1-default-rtdb.firebaseio.com",
+    "project_id": "shcool-388a1",
+    "storage_bucket": "shcool-388a1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:514965375276:android:4de0f6c6b197eb9c4c0489",
+        "android_client_info": {
+          "package_name": "com.example.myapplication"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAA0FTUkHS_BptH4VMVFq5qF_7Z0Ql3D_c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

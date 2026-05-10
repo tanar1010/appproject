@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="32dp"
+    android:gravity="center">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="회원가입"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="30dp"/>
+
+    <EditText
+        android:id="@+id/et_reg_email"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="이메일 주소"/>
+
+    <EditText
+        android:id="@+id/et_reg_password"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="비밀번호(6자리 이상)"
+        android:inputType="textPassword"/>
+
+    <RadioGroup
+        android:id="@+id/rg_reg_role"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="20dp">
+        <RadioButton android:id="@+id/rb_reg_student" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="학생" android:checked="true"/>
+        <RadioButton android:id="@+id/rb_reg_teacher" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="선생님" android:layout_marginStart="20dp"/>
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/btn_register_submit"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:text="가입하기"
+        android:layout_marginTop="30dp"/>
+</LinearLayout>
