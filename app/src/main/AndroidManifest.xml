@@ -24,6 +24,7 @@
         <activity
             android:name=".LoginActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden"
             android:label="로그인">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
