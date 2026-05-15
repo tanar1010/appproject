@@ -7,7 +7,6 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <!-- 메인 화면 콘텐츠 영역 -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -24,10 +23,11 @@
             app:layout_constraintTop_toTopOf="parent" />
 
         <FrameLayout
+            android:id="@+id/center_content"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             app:layout_constraintTop_toBottomOf="@id/toolbar"
-            app:layout_constraintBottom_toBottomOf="parent">
+            app:layout_constraintBottom_toTopOf="@id/bottom_button_container">
 
             <TextView
                 android:id="@+id/dataDisplay"
@@ -40,9 +40,39 @@
                 android:textColor="#333333" />
         </FrameLayout>
 
+        <LinearLayout
+            android:id="@+id/bottom_button_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dp"
+            android:background="#F5F5F5"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <Button
+                android:id="@+id/btn_bottom_1"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:minHeight="48dp"
+                android:text="버튼 1" />
+
+            <Button
+                android:id="@+id/btn_bottom_2"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:minHeight="48dp"
+                android:text="버튼 2" />
+
+        </LinearLayout>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- 사이드 메뉴(Drawer) 영역 -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/nav_view"
         android:layout_width="280dp"
@@ -55,7 +85,6 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <!-- [수정됨] 날씨 정보가 표시될 헤더 영역 -->
             <LinearLayout
                 android:id="@+id/nav_header"
                 android:layout_width="match_parent"
@@ -84,7 +113,6 @@
                     android:layout_marginTop="8dp"/>
             </LinearLayout>
 
-            <!-- 메뉴 버튼 리스트 -->
             <ScrollView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent">

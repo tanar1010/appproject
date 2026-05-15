@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    // 여것도 파이어 베이스 프로젝트 빌드거기에도 id로 시작되는거 있을겨 그것도 ㅇㅇ
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -81,5 +83,10 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation("com.google.android.material:material:1.9.0")
 // 이 줄이 있어야 드로어가 작동합니다.
+    // 파이어베이스꺼 문제있음 여기를 봐라
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-}
+    implementation("com.google.firebase:firebase-bom:34.13.0")
+    implementation("com.google.firebase:firebase-analytics:23.2.0")
+    implementation("com.google.firebase:firebase-auth-ktx:23.2.1")     // 로그인용
+    implementation("com.google.firebase:firebase-firestore-ktx:25.1.4") // 권한 저장용
+    implementation("androidx.core:core-ktx:1.12.0")}
