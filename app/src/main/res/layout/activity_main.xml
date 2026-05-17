@@ -58,7 +58,7 @@
                 android:layout_weight="1"
                 android:layout_marginEnd="4dp"
                 android:minHeight="48dp"
-                android:text="버튼 1" />
+                android:text="공지사항" />
 
             <Button
                 android:id="@+id/btn_bottom_2"
@@ -67,7 +67,7 @@
                 android:layout_weight="1"
                 android:layout_marginStart="4dp"
                 android:minHeight="48dp"
-                android:text="버튼 2" />
+                android:text="메신저" />
 
         </LinearLayout>
 
@@ -123,16 +123,16 @@
                     android:orientation="vertical"
                     android:padding="10dp">
 
-                    <Button android:id="@+id/btn1" android:layout_width="match_parent" android:layout_height="60dp" android:text="실시간 날씨 갱신" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
+                    <Button android:id="@+id/btn1" android:layout_width="match_parent" android:layout_height="60dp" android:text="캘린더" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDDDDD" />
 
-                    <Button android:id="@+id/btn2" android:layout_width="match_parent" android:layout_height="60dp" android:text="미세먼지 정보" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
+                    <Button android:id="@+id/btn2" android:layout_width="match_parent" android:layout_height="60dp" android:text="급식표" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDDDDD" />
 
-                    <Button android:id="@+id/btn3" android:layout_width="match_parent" android:layout_height="60dp" android:text="내일 예보" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
+                    <Button android:id="@+id/btn3" android:layout_width="match_parent" android:layout_height="60dp" android:text="시간표" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDDDDD" />
 
-                    <Button android:id="@+id/btn4" android:layout_width="match_parent" android:layout_height="60dp" android:text="전국 날씨" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
+                    <Button android:id="@+id/btn4" android:layout_width="match_parent" android:layout_height="60dp" android:text="개인정보설정" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#DDDDDD" />
 
                     <Button android:id="@+id/btn5" android:layout_width="match_parent" android:layout_height="60dp" android:text="알림 설정" style="?android:attr/borderlessButtonStyle" android:gravity="start|center_vertical"/>

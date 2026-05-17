@@ -89,4 +89,7 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics:23.2.0")
     implementation("com.google.firebase:firebase-auth-ktx:23.2.1")     // 로그인용
     implementation("com.google.firebase:firebase-firestore-ktx:25.1.4") // 권한 저장용
-    implementation("androidx.core:core-ktx:1.12.0")}
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("com.google.firebase:firebase-database-ktx:21.0.0")
+    implementation("com.google.firebase:firebase-database")
+}
