@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- 고유 뷰 ID 정식 등록 -->
     <item name="teacher_button_panel" type="id" />
+    <item name="chat_input_panel" type="id" />
 </resources>
