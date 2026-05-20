@@ -31,6 +31,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.tan
 
+
 @Suppress("SetTextI18n", "PrivatePropertyName", "LocalVariableName", "SpellCheckingInspection")
 class MainActivity : AppCompatActivity() {
 

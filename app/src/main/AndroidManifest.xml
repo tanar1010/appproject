@@ -35,16 +35,8 @@
         <!-- 2. 기존 MainActivity (구조 유지) -->
         <activity
             android:name=".MainActivity"
-            android:exported="false" />
-
-        <!-- 3. 기능이 작동할 학생용/선생님용 액티비티 등록 -->
-        <activity
-            android:name=".StudentMainActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".TeacherMainActivity"
-            android:exported="false" />
+            android:windowSoftInputMode="adjustResize"
+            android:exported="true" />
 
         <activity
             android:name=".RegisterActivity"
