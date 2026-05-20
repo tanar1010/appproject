@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="20dp">
+    android:padding="16dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -10,47 +10,104 @@
         android:orientation="vertical">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="👨‍🏫 선생님 시간표 등록"
+            android:text="🗓️ 주간 시간표 일괄 설정"
             android:textSize="20sp"
             android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="15dp"/>
+            android:gravity="center"
+            android:layout_marginBottom="24dp"
+            android:textColor="#333333"/>
 
-        <!-- 요일 선택 스피너 -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="설정할 요일 선택"
-            android:textSize="14sp"
-            android:layout_marginBottom="5dp"/>
+            android:text="동 월요일"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:layout_marginBottom="8dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginBottom="20dp">
+            <EditText android:id="@+id/et_mon_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="1교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_mon_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="2교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_mon_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="3교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_mon_4" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="4교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_mon_5" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="5교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_mon_6" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="6교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_mon_7" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="7교시 과목" android:inputType="text"/>
+        </LinearLayout>
 
-        <Spinner
-            android:id="@+id/spinner_day"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:entries="@array/days_array"
-            android:layout_marginBottom="20dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="화 화요일"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:layout_marginBottom="8dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginBottom="20dp">
+            <EditText android:id="@+id/et_tue_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="1교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_tue_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="2교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_tue_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="3교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_tue_4" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="4교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_tue_5" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="5교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_tue_6" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="6교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_tue_7" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="7교시 과목" android:inputType="text"/>
+        </LinearLayout>
 
-        <!-- 교시별 입력창 (1~6교시) -->
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1교시 수업명"/>
-        <EditText android:id="@+id/et_period1" android:layout_width="match_parent" android:layout_height="48dp" android:hint="예: 3학년 1반 국어" android:inputType="text"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="수 수요일"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:layout_marginBottom="8dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginBottom="20dp">
+            <EditText android:id="@+id/et_wed_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="1교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_wed_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="2교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_wed_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="3교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_wed_4" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="4교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_wed_5" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="5교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_wed_6" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="6교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_wed_7" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="7교시 과목" android:inputType="text"/>
+        </LinearLayout>
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="2교시 수업명" android:layout_marginTop="10dp"/>
-        <EditText android:id="@+id/et_period2" android:layout_width="match_parent" android:layout_height="48dp" android:hint="예: 1학년 2반 영어" android:inputType="text"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="목 목요일"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:layout_marginBottom="8dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginBottom="20dp">
+            <EditText android:id="@+id/et_thu_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="1교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_thu_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="2교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_thu_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="3교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_thu_4" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="4교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_thu_5" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="5교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_thu_6" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="6교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_thu_7" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="7교시 과목" android:inputType="text"/>
+        </LinearLayout>
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="3교시 수업명" android:layout_marginTop="10dp"/>
-        <EditText android:id="@+id/et_period3" android:layout_width="match_parent" android:layout_height="48dp" android:hint="수업이 없으면 비워두세요" android:inputType="text"/>
-
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="4교시 수업명" android:layout_marginTop="10dp"/>
-        <EditText android:id="@+id/et_period4" android:layout_width="match_parent" android:layout_height="48dp" android:inputType="text"/>
-
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="5교시 수업명" android:layout_marginTop="10dp"/>
-        <EditText android:id="@+id/et_period5" android:layout_width="match_parent" android:layout_height="48dp" android:inputType="text"/>
-
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="6교시 수업명" android:layout_marginTop="10dp"/>
-        <EditText android:id="@+id/et_period6" android:layout_width="match_parent" android:layout_height="48dp" android:inputType="text"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="금 금요일"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:layout_marginBottom="8dp"/>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginBottom="16dp">
+            <EditText android:id="@+id/et_fri_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="1교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_fri_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="2교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_fri_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="3교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_fri_4" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="4교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_fri_5" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="5교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_fri_6" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="6교시 과목" android:inputType="text"/>
+            <EditText android:id="@+id/et_fri_7" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="7교시 과목" android:inputType="text"/>
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

@@ -140,6 +140,9 @@
                     <Button android:id="@+id/btn4" android:layout_width="match_parent" android:layout_height="60dp" android:text="개인정보설정" style="?android:attr/borderlessButtonStyle" android:textColor="@color/text_primary" android:gravity="start|center_vertical"/>
                     <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider_color" />
 
+                    <Button android:id="@+id/btn5" android:layout_width="match_parent" android:layout_height="60dp" android:text="로그아웃" style="?android:attr/borderlessButtonStyle" android:textColor="@color/text_primary" android:gravity="start|center_vertical"/>
+                    <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider_color" />
+
 
                 </LinearLayout>
             </ScrollView>

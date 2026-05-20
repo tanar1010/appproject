@@ -28,8 +28,17 @@
         android:layout_height="wrap_content"
         android:hint="비밀번호"
         android:inputType="textPassword"
-        android:layout_marginBottom="20dp"/>
+        android:layout_marginBottom="10dp"/>
 
+    <!-- ☑️ 자동 로그인 체크박스 추가 -->
+    <CheckBox
+        android:id="@+id/cb_auto_login"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start"
+        android:layout_marginBottom="20dp"
+        android:text="자동 로그인 유지"
+        android:textSize="14sp" />
 
     <Button
         android:id="@+id/btn_login"

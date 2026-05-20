@@ -3,6 +3,11 @@ package com.example.myapplication
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -11,10 +16,12 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 class NoticeManager(
     private val context: Context,
@@ -23,131 +30,270 @@ class NoticeManager(
     private val db: FirebaseFirestore get() = FirebaseFirestore.getInstance()
     private val auth: FirebaseAuth get() = FirebaseAuth.getInstance()
 
-    // 가져온 공지들의 문서 ID를 저장해둘 리스트
-    private val noticeIdList = ArrayList<String>()
+    private var currentPage = 1
+    private val itemsPerPage = 5
+    private var allDocuments: List<DocumentSnapshot> = ArrayList()
+    private var isCurrentUserTeacher = false
 
-    /**
-     * 1. 하단 버튼 1을 누르거나 새로고침할 때 호출되는 함수
-     */
+    private val currentPageNoticeIds = ArrayList<String>()
+    private val currentPageTitles = ArrayList<String>()
+
     fun fetchNotices() {
         dataDisplay.text = "공지사항을 불러오는 중..."
-        noticeIdList.clear()
+        currentPage = 1
+        currentPageNoticeIds.clear()
+        currentPageTitles.clear()
 
         val uid = auth.currentUser?.uid
         if (uid == null) {
-            loadNoticesText(isTeacher = false)
+            isCurrentUserTeacher = false
+            loadAllNotices()
             return
         }
 
         AuthManager.getRole(uid) { role ->
-            val isTeacher = (role == AuthManager.ROLE_TEACHER)
-            loadNoticesText(isTeacher)
+            isCurrentUserTeacher = (role == AuthManager.ROLE_TEACHER)
+            loadAllNotices()
         }
     }
 
-    /**
-     * 2. 오직 텍스트로만 공지를 띄우고, 선생님일 때만 상단에 관리 버튼 패널을 주입하는 함수
-     */
-    private fun loadNoticesText(isTeacher: Boolean) {
+    private fun loadAllNotices() {
         db.collection("Notices")
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .get()
             .addOnSuccessListener { documents ->
-                val parentView = dataDisplay.parent as? ViewGroup ?: return@addOnSuccessListener
-
-                // 🧹 [청소] 새로 그리기 전에 기존에 만들어둔 버튼 패널이 있다면 확실하게 제거
-                val oldPanel = parentView.findViewById<View>(R.id.teacher_button_panel)
-                if (oldPanel != null) {
-                    parentView.removeView(oldPanel)
-                }
-
-                // 🆕 [선생님 권한일 때만] 화면 상단에 추가/삭제 버튼 레이아웃 배치
-                if (isTeacher) {
-                    val buttonPanel = LinearLayout(context).apply {
-                        id = R.id.teacher_button_panel
-                        orientation = LinearLayout.HORIZONTAL
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT
-                        ).apply {
-                            setMargins(0, 0, 0, 30) // 공지 텍스트와 간격 벌리기
-                        }
-                    }
-
-                    // [공지 추가] 버튼
-                    val btnAdd = Button(context).apply {
-                        text = "➕ 공지 추가"
-                        setBackgroundColor(Color.parseColor("#6200EE")) // 보라색
-                        setTextColor(Color.WHITE)
-                        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                            setMargins(0, 0, 10, 0)
-                        }
-                        setOnClickListener { showAddNoticeDialog() }
-                    }
-
-                    // [공지 삭제] 버튼
-                    val btnDelete = Button(context).apply {
-                        text = "❌ 공지 삭제"
-                        setBackgroundColor(Color.parseColor("#E53935")) // 빨간색
-                        setTextColor(Color.WHITE)
-                        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                            setMargins(10, 0, 0, 0)
-                        }
-                        setOnClickListener { showDeleteSelectDialog() }
-                    }
-
-                    buttonPanel.addView(btnAdd)
-                    buttonPanel.addView(btnDelete)
-
-                    // dataDisplay 바로 위에 버튼 패널을 끼워넣습니다.
-                    val index = parentView.indexOfChild(dataDisplay)
-                    parentView.addView(buttonPanel, index)
-                }
-
-                // 데이터가 없을 때의 처리
-                if (documents.isEmpty) {
-                    dataDisplay.text = "📢 [학급 공지사항]\n--------------------------\n\n등록된 공지사항이 없습니다."
-                    return@addOnSuccessListener
-                }
-
-                // 급식표처럼 순수 텍스트 조합 시작
-                var result = "📢 [학급 공지사항]\n--------------------------\n\n"
-                var index = 1
-
-                for (document in documents) {
-                    val content = document.getString("content") ?: ""
-                    val date = document.getString("date") ?: ""
-
-                    result += "$index. 📌 $content\n   └ ($date)\n\n"
-                    noticeIdList.add(document.id)
-                    index++
-                }
-
-                // 텍스트 주입 (중첩 절대 없음)
-                dataDisplay.text = result
+                allDocuments = documents.documents
+                renderNoticePage()
             }
             .addOnFailureListener {
                 dataDisplay.text = "공지사항을 불러오지 못했습니다."
             }
     }
 
-    /**
-     * 3. 새 공지 추가 팝업
-     */
+    private fun renderNoticePage() {
+        val parentView = dataDisplay.parent as? ViewGroup ?: return
+
+        // 🧹 기존 동적 뷰 일단 청소
+        removeDynamicButton()
+
+        currentPageNoticeIds.clear()
+        currentPageTitles.clear()
+
+        // 🚨 [핵심 수정] 데이터가 아예 없을 때 예외 처리 메커니즘 전면 전개
+        if (allDocuments.isEmpty()) {
+            dataDisplay.text = "📢 [학급 공지사항] (페이지 0 / 0)\n--------------------------\n\n등록된 공지사항이 없습니다."
+
+            // 데이터가 없어도 선생님 권한이거나 페이징 패널 레이아웃 틀 유지를 위해 총 페이지 0으로 강제 진입 유도
+            showTopIntegratedControlPanel(parentView, 0)
+            return
+        }
+
+        val totalPages = kotlin.math.ceil(allDocuments.size.toDouble() / itemsPerPage).toInt()
+        if (currentPage > totalPages) currentPage = totalPages
+
+        val startIndex = (currentPage - 1) * itemsPerPage
+        var endIndex = startIndex + itemsPerPage
+        if (endIndex > allDocuments.size) endIndex = allDocuments.size
+
+        // 📝 공지사항 본문 타이틀 및 안내 문구 배치
+        val header = "📢 [학급 공지사항] (페이지 $currentPage / $totalPages)\n클릭하면 상세 내용을 볼 수 있습니다.\n--------------------------\n\n"
+        val fullStringBuilder = StringBuilder(header)
+        val clickRegions = ArrayList<Pair<Int, Int>>()
+
+        val pageSubList = allDocuments.subList(startIndex, endIndex)
+
+        var displayIndex = startIndex + 1
+        for (document in pageSubList) {
+            val content = document.getString("content") ?: ""
+            val date = document.getString("date") ?: ""
+            val title = document.getString("title") ?: if (content.length > 15) content.substring(0, 15) + "..." else content
+
+            currentPageNoticeIds.add(document.id)
+            currentPageTitles.add(title)
+
+            val itemText = "$displayIndex. 📌 $title  ($date)\n\n"
+            val startPos = fullStringBuilder.length
+            fullStringBuilder.append(itemText)
+            val endPos = fullStringBuilder.length - 2
+
+            clickRegions.add(Pair(startPos, endPos))
+            displayIndex++
+        }
+
+        val spannableString = SpannableString(fullStringBuilder.toString())
+
+        for (i in clickRegions.indices) {
+            val region = clickRegions[i]
+            val doc = pageSubList[i]
+            val title = currentPageTitles[i]
+            val content = doc.getString("content") ?: ""
+            val date = doc.getString("date") ?: ""
+
+            val clickableSpan = object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    showNoticeDetailDialog(title, content, date)
+                }
+            }
+            spannableString.setSpan(clickableSpan, region.first, region.second, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        dataDisplay.movementMethod = LinkMovementMethod.getInstance()
+        dataDisplay.highlightColor = Color.TRANSPARENT
+        dataDisplay.text = spannableString
+
+        // 정상 데이터 존재 시 상단 패널 렌더링
+        showTopIntegratedControlPanel(parentView, totalPages)
+    }
+
+    private fun showTopIntegratedControlPanel(parentView: ViewGroup, totalPages: Int) {
+        val topPanel = LinearLayout(context).apply {
+            id = R.id.teacher_button_panel
+            tag = "DYNAMIC_TEACHER_PANEL"
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+
+        val pParams = dataDisplay.layoutParams
+        topPanel.layoutParams = if (pParams is LinearLayout.LayoutParams) {
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(15, 5, 15, 20)
+            }
+        } else {
+            ViewGroup.MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                setMargins(15, 5, 15, 20)
+            }
+        }
+
+        // [선생님 권한] ➕ 추가 버튼 (데이터 유무 상관없이 무조건 렌더링)
+        if (isCurrentUserTeacher) {
+            val btnAdd = Button(context).apply {
+                text = "➕ 추가"
+                textSize = 12f
+                setBackgroundColor(Color.parseColor("#6200EE"))
+                setTextColor(Color.WHITE)
+                setPadding(10, 10, 10, 10)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins(5, 0, 15, 0)
+                }
+                setOnClickListener { showAddNoticeDialog() }
+            }
+            topPanel.addView(btnAdd)
+        }
+
+        // --- 중앙 순수 페이징 영역 ---
+        val pagingContainer = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val btnPrevPage = Button(context).apply {
+            text = "◀"
+            textSize = 13f
+            setPadding(25, 12, 25, 12)
+            // 데이터가 없거나 1페이지면 비활성화
+            isEnabled = totalPages > 0 && currentPage > 1
+            setOnClickListener {
+                if (currentPage > 1) {
+                    currentPage--
+                    renderNoticePage()
+                }
+            }
+        }
+
+        val tvPageInfo = TextView(context).apply {
+            text = "  ${if (totalPages == 0) 0 else currentPage} / $totalPages  "
+            textSize = 14f
+            setTextColor(Color.parseColor("#6200EE"))
+            gravity = Gravity.CENTER
+        }
+
+        val btnNextPage = Button(context).apply {
+            text = "▶"
+            textSize = 13f
+            setPadding(25, 12, 25, 12)
+            // 데이터가 없거나 마지막 페이지면 비활성화
+            isEnabled = totalPages > 0 && currentPage < totalPages
+            setOnClickListener {
+                if (currentPage < totalPages) {
+                    currentPage++
+                    renderNoticePage()
+                }
+            }
+        }
+
+        pagingContainer.addView(btnPrevPage)
+        pagingContainer.addView(tvPageInfo)
+        pagingContainer.addView(btnNextPage)
+        topPanel.addView(pagingContainer)
+
+        // [선생님 권한] ❌ 삭제 버튼
+        if (isCurrentUserTeacher) {
+            val btnDelete = Button(context).apply {
+                text = "❌ 삭제"
+                textSize = 12f
+                setBackgroundColor(Color.parseColor("#E53935"))
+                setTextColor(Color.WHITE)
+                setPadding(10, 10, 10, 10)
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    setMargins(15, 0, 5, 0)
+                }
+                // 삭제할 데이터가 아예 없을 때는 버튼 비활성화 처리해서 크래시 방지
+                isEnabled = totalPages > 0
+                if (totalPages == 0) {
+                    setBackgroundColor(Color.GRAY)
+                }
+                setOnClickListener { showDeleteSelectDialog() }
+            }
+            topPanel.addView(btnDelete)
+        }
+
+        val index = parentView.indexOfChild(dataDisplay)
+        parentView.addView(topPanel, index)
+        topPanel.bringToFront()
+    }
+
+    private fun showNoticeDetailDialog(title: String, content: String, date: String) {
+        AlertDialog.Builder(context)
+            .setTitle("📌 $title")
+            .setMessage("\n$content\n\n작성일: $date")
+            .setPositiveButton("닫기", null)
+            .show()
+    }
+
     private fun showAddNoticeDialog() {
         val builder = AlertDialog.Builder(context)
         builder.setTitle("새 공지사항 등록")
 
-        val input = EditText(context)
-        input.hint = "공지 내용을 입력하세요."
-        builder.setView(input)
+        val layout = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(50, 40, 50, 10)
+        }
+
+        val etTitle = EditText(context).apply {
+            hint = "공지 제목을 입력하세요."
+            maxLines = 1
+        }
+        val etContent = EditText(context).apply {
+            hint = "공지 상세 내용을 입력하세요."
+            minLines = 3
+        }
+
+        layout.addView(etTitle)
+        layout.addView(etContent)
+        builder.setView(layout)
 
         builder.setPositiveButton("등록") { dialog, _ ->
-            val content = input.text.toString().trim()
-            if (content.isNotEmpty()) {
-                uploadNotice(content)
+            val title = etTitle.text.toString().trim()
+            val content = etContent.text.toString().trim()
+
+            if (title.isNotEmpty() && content.isNotEmpty()) {
+                uploadNotice(title, content)
             } else {
-                Toast.makeText(context, "내용이 비어있습니다.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "제목과 내용을 모두 입력해 주세요.", Toast.LENGTH_SHORT).show()
             }
             dialog.dismiss()
         }
@@ -155,11 +301,12 @@ class NoticeManager(
         builder.show()
     }
 
-    private fun uploadNotice(content: String) {
+    private fun uploadNotice(title: String, content: String) {
         val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
         val formattedDate = sdf.format(Date())
 
         val noticeMap = hashMapOf(
+            "title" to title,
             "content" to content,
             "date" to formattedDate,
             "timestamp" to System.currentTimeMillis()
@@ -168,59 +315,31 @@ class NoticeManager(
         db.collection("Notices").add(noticeMap)
             .addOnSuccessListener {
                 Toast.makeText(context, "공지가 등록되었습니다.", Toast.LENGTH_SHORT).show()
-                fetchNotices() // 화면 자동 새로고침
+                fetchNotices()
             }
     }
 
-    /**
-     * 4. 삭제할 공지 선택 팝업 (오타 수정한 정상 버전)
-     */
-    /**
-     * 4. 삭제할 공지 선택 팝업 (번호 대신 공지 본문 앞부분을 잘라서 보여주는 버전)
-     */
     private fun showDeleteSelectDialog() {
-        if (noticeIdList.isEmpty()) {
+        if (currentPageNoticeIds.isEmpty()) {
             Toast.makeText(context, "삭제할 공지사항이 없습니다.", Toast.LENGTH_SHORT).show()
             return
         }
 
         val deleteOptions = ArrayList<String>()
-        val currentLines = dataDisplay.text.toString().split("\n")
-
-        var matchIndex = 0
-        for (line in currentLines) {
-            // 공지 본문 내용이 담긴 라인을 찾아냅니다.
-            if (line.contains("📌")) {
-                // "📌 " 기호를 떼고 순수 글자만 추출
-                val pureContent = line.replace("📌", "").trim()
-
-                // 글자가 너무 길면 15자까지만 자르고 뒤에 '...' 붙이기
-                val shortContent = if (pureContent.length > 15) {
-                    pureContent.substring(0, 15) + "..."
-                } else {
-                    pureContent
-                }
-
-                // 선택지 목록에 추가 (예: "[1] 내일은 준비물..." )
-                deleteOptions.add("[${matchIndex + 1}] $shortContent")
-                matchIndex++
+        for (i in currentPageTitles.indices) {
+            val shortTitle = if (currentPageTitles[i].length > 15) {
+                currentPageTitles[i].substring(0, 15) + "..."
+            } else {
+                currentPageTitles[i]
             }
-        }
-
-        // 만약 텍스트 파싱 중 싱크가 깨질 경우를 대비한 안전장치
-        if (deleteOptions.size != noticeIdList.size) {
-            // 파싱이 꼬였다면 안전하게 기본 인덱스로 대체 출력
-            deleteOptions.clear()
-            for (i in noticeIdList.indices) {
-                deleteOptions.add("${i + 1}번 공지 삭제")
-            }
+            deleteOptions.add("[$((currentPage - 1) * itemsPerPage + i + 1)] $shortTitle")
         }
 
         AlertDialog.Builder(context)
-            .setTitle("삭제할 공지를 선택하세요")
+            .setTitle("삭제할 공지를 선택하세요 (현재 페이지)")
             .setItems(deleteOptions.toTypedArray()) { _, which ->
-                if (which < noticeIdList.size) {
-                    val targetDocId = noticeIdList[which]
+                if (which < currentPageNoticeIds.size) {
+                    val targetDocId = currentPageNoticeIds[which]
                     confirmDelete(targetDocId)
                 }
             }
@@ -236,21 +355,22 @@ class NoticeManager(
                 db.collection("Notices").document(docId).delete()
                     .addOnSuccessListener {
                         Toast.makeText(context, "공지가 삭제되었습니다.", Toast.LENGTH_SHORT).show()
-                        fetchNotices() // 화면 자동 새로고침
+                        fetchNotices()
                     }
             }
             .setNegativeButton("취소", null)
             .show()
     }
 
-    /**
-     * 5. 급식이나 시간표 등 다른 메뉴로 넘어갈 때 상단 버튼 패널을 깔끔하게 지워주는 함수
-     */
     fun removeDynamicButton() {
         val parentView = dataDisplay.parent as? ViewGroup ?: return
-        val oldPanel = parentView.findViewById<View>(R.id.teacher_button_panel)
-        if (oldPanel != null) {
-            parentView.removeView(oldPanel)
+
+        val childCount = parentView.childCount
+        for (i in childCount - 1 downTo 0) {
+            val child = parentView.getChildAt(i)
+            if (child?.tag == "DYNAMIC_PAGE_PANEL" || child?.tag == "DYNAMIC_TEACHER_PANEL" || child?.id == R.id.teacher_button_panel) {
+                parentView.removeView(child)
+            }
         }
     }
 }

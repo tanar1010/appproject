@@ -1,19 +1,29 @@
 package com.example.myapplication
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.edit
 import androidx.core.view.GravityCompat
+import androidx.core.view.WindowCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.appbar.MaterialToolbar
@@ -31,8 +41,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.tan
 
-
-@Suppress("SetTextI18n", "PrivatePropertyName", "LocalVariableName", "SpellCheckingInspection")
+@Suppress("SetTextI18n", "PrivatePropertyName")
 class MainActivity : AppCompatActivity() {
 
     private lateinit var drawerLayout: DrawerLayout
@@ -40,9 +49,10 @@ class MainActivity : AppCompatActivity() {
     private var tvMenuTemp: TextView? = null
     private var tvMenuDesc: TextView? = null
     private lateinit var profileManager: ProfileManager
-
-    // 🎨 [기능 추가] 형의 소중한 원본 유지하면서 캘린더 매니저만 안전하게 주입
     private lateinit var calendarManager: CalendarManager
+
+    private var mealButtonPanel: ViewGroup? = null
+    private var timetableButtonPanel: ViewGroup? = null
 
     private val serviceKey = "859a622fe6b7f612605ae804aa607702fa0ffa900bcf6d0fbd721193b240fe17"
 
@@ -56,8 +66,6 @@ class MainActivity : AppCompatActivity() {
         dataDisplay = findViewById(R.id.dataDisplay)
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         profileManager = ProfileManager(this)
-
-        // 🎨 [기능 추가] 캘린더 매니저 초기화 등록
         calendarManager = CalendarManager(this, dataDisplay)
 
         tvMenuTemp = findViewById(R.id.tv_menu_temp)
@@ -71,7 +79,6 @@ class MainActivity : AppCompatActivity() {
         setupMenuButtons()
         checkUserLoginAndProfile()
     }
-
 
     private fun checkUserLoginAndProfile() {
         val auth = FirebaseAuth.getInstance()
@@ -95,12 +102,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun hideSystemUI() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false)
-            val controller = window.insetsController
-            if (controller != null) {
-                controller.hide(android.view.WindowInsets.Type.statusBars() or android.view.WindowInsets.Type.navigationBars())
-                controller.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            window.insetsController?.let { controller ->
+                controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+                controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
         } else {
             @Suppress("DEPRECATION")
@@ -127,25 +133,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun checkPermissionAndGetWeather() {
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             getCurrentLocation()
         } else {
-            locationPermissionRequest.launch(
-                arrayOf(
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.ACCESS_COARSE_LOCATION
-                )
-            )
+            locationPermissionRequest.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
         }
     }
 
-    private val locationPermissionRequest = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
+    private val locationPermissionRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         if (permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false)) {
             getCurrentLocation()
         } else {
@@ -197,14 +192,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         RetrofitClient.service.getWeather(
-            key = serviceKey,
-            num = 10,
-            page = 1,
-            type = "JSON",
-            date = baseDate,
-            time = baseTime,
-            nx = nx,
-            ny = ny
+            key = serviceKey, num = 10, page = 1, type = "JSON", date = baseDate, time = baseTime, nx = nx, ny = ny
         ).enqueue(object : Callback<WeatherResponse> {
             override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>) {
                 if (response.isSuccessful) {
@@ -242,44 +230,165 @@ class MainActivity : AppCompatActivity() {
         val chatManager = ChatManager(this, dataDisplay)
         val mealManager = MealManager(dataDisplay)
 
-        // 🔄 [사이드바] 2번 버튼: 기존 급식 기능 100% 원본 유지
+        dataDisplay.setOnLongClickListener {
+            timetableManager.showTeacherInputDialog(this)
+            true
+        }
+
+        // 📅 [btn1] 학사일정 버튼
+        findViewById<Button>(R.id.btn1)?.setOnClickListener {
+            clearAllSubFeatures(noticeManager, chatManager)
+            calendarManager.openCalendar()
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+
+        // 🍱 [btn2] 급식 확인 버튼
         findViewById<Button>(R.id.btn2)?.setOnClickListener {
             clearAllSubFeatures(noticeManager, chatManager)
+
             mealManager.fetchTodayMeal()
+
+            val rootLayout = dataDisplay.parent as? ViewGroup
+            if (rootLayout != null) {
+                val linearLayout = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = 20
+                        bottomMargin = 20
+                    }
+                }
+
+                val btnPrev = Button(this).apply {
+                    text = "◀ 이전 날짜"
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(250, 110)
+                    setOnClickListener { mealManager.moveToPrevDay() }
+                }
+
+                val spacer = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(60, 1)
+                }
+
+                val btnNext = Button(this).apply {
+                    text = "다음 날짜 ▶"
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(250, 110)
+                    setOnClickListener { mealManager.moveToNextDay() }
+                }
+
+                linearLayout.addView(btnPrev)
+                linearLayout.addView(spacer)
+                linearLayout.addView(btnNext)
+
+                // dataDisplay 아래쪽에 안정적으로 안착 유도 및 강제 가시성 확보
+                val index = rootLayout.indexOfChild(dataDisplay)
+                if (index >= 0) {
+                    rootLayout.addView(linearLayout, index + 1)
+                } else {
+                    rootLayout.addView(linearLayout)
+                }
+                linearLayout.bringToFront()
+
+                mealButtonPanel = linearLayout
+            }
+
             drawerLayout.closeDrawer(GravityCompat.START)
         }
 
-        // [사이드바] 3번 버튼: 나이스 시간표 기능 100% 원본 유지
+        // ⏱️ [btn3] 시간표 버튼 (UI 짤림/버튼 증발 완전 차단)
         findViewById<Button>(R.id.btn3)?.setOnClickListener {
             clearAllSubFeatures(noticeManager, chatManager)
-            timetableManager.fetchTimetable()
+
+            timetableManager.fetchTodayTimetable()
+
+            val rootLayout = dataDisplay.parent as? ViewGroup
+            if (rootLayout != null) {
+                val linearLayout = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = 20
+                        bottomMargin = 20
+                    }
+                }
+
+                val btnPrev = Button(this).apply {
+                    text = "◀ 이전 날짜"
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(250, 110)
+                    setOnClickListener { timetableManager.moveToPrevDay() }
+                }
+
+                val spacer = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(60, 1)
+                }
+
+                val btnNext = Button(this).apply {
+                    text = "다음 날짜 ▶"
+                    textSize = 14f
+                    layoutParams = LinearLayout.LayoutParams(250, 110)
+                    setOnClickListener { timetableManager.moveToNextDay() }
+                }
+
+                linearLayout.addView(btnPrev)
+                linearLayout.addView(spacer)
+                linearLayout.addView(btnNext)
+
+                // 가려지는 버그 원천 봉쇄: 정확히 dataDisplay 바로 한 칸 뒤(아래)에 뷰 삽입
+                val index = rootLayout.indexOfChild(dataDisplay)
+                if (index >= 0) {
+                    rootLayout.addView(linearLayout, index + 1)
+                } else {
+                    rootLayout.addView(linearLayout)
+                }
+                linearLayout.bringToFront()
+
+                timetableButtonPanel = linearLayout
+            }
+
             drawerLayout.closeDrawer(GravityCompat.START)
         }
 
-        // [사이드바] 4번 버튼: 내 프로필 정보 관리 및 수정 창 원본 유지
+        // 👤 [btn4] 프로필 수정 버튼
         findViewById<Button>(R.id.btn4)?.setOnClickListener {
             profileManager.showProfileEditDialog()
             drawerLayout.closeDrawer(GravityCompat.START)
         }
 
-        // [메인화면 하단 버튼 1]: 공지사항 기능 실행 원본 유지
+        // 🚪 [btn5] 로그아웃 버튼
+        findViewById<Button>(R.id.btn5)?.setOnClickListener {
+            clearAllSubFeatures(noticeManager, chatManager)
+
+            val sharedPref = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            sharedPref.edit { putBoolean("key_auto_login", false) }
+
+            FirebaseAuth.getInstance().signOut()
+
+            Toast.makeText(this, "로그아웃되었습니다.", Toast.LENGTH_SHORT).show()
+
+            val intent = Intent(this, LoginActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+        }
+
+        // 📢 하단 버튼 1 (공지사항)
         findViewById<Button>(R.id.btn_bottom_1)?.setOnClickListener {
             clearAllSubFeatures(noticeManager, chatManager)
             noticeManager.fetchNotices()
         }
 
-        // [메인화면 하단 버튼 2]: 1대1 채팅방 실행 원본 유지
+        // 💬 하단 버튼 2 (질의응답/채팅)
         findViewById<Button>(R.id.btn_bottom_2)?.setOnClickListener {
             clearAllSubFeatures(noticeManager, chatManager)
             openChatWithAuth(chatManager)
-        }
-
-        // 📅 [기능 추가]: 형, 캘린더 기능을 작동시키기 위해 비어있던 사이드바 1번 버튼(btn1)이나 메인 하단 남는 버튼에 아래 한 줄만 심어 쓰면 돼!
-        // 예시로 btn1(사이드바 첫번째 메뉴)에 연동해둘게! 만약 하단 버튼에 넣고 싶으면 R.id.btn_bottom_3 같은 걸로 바꾸기만 하면 끝이야!
-        findViewById<Button>(R.id.btn1)?.setOnClickListener {
-            clearAllSubFeatures(noticeManager, chatManager)
-            calendarManager.openCalendar() // 👈 안전하게 캘린더 화면 열기
-            drawerLayout.closeDrawer(GravityCompat.START)
         }
     }
 
@@ -293,16 +402,23 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * 🧹 [기능 추가] 화면 전환 시 컴포넌트 찌꺼기와 리스너들을 원천 안전 청소하는 함수
-     */
     private fun clearAllSubFeatures(noticeManager: NoticeManager, chatManager: ChatManager) {
         noticeManager.removeDynamicButton()
         chatManager.removeChatComponents()
+
+        mealButtonPanel?.let { panel ->
+            (panel.parent as? ViewGroup)?.removeView(panel)
+            mealButtonPanel = null
+        }
+
+        timetableButtonPanel?.let { panel ->
+            (panel.parent as? ViewGroup)?.removeView(panel)
+            timetableButtonPanel = null
+        }
+
         try {
-            calendarManager.removeCalendarComponents() // 👈 캘린더 컴포넌트 제거 연동
-        } catch (e: Exception) {
-            // 혹시 아직 컴포넌트 제거가 정의되지 않았을 경우 크래시 예방 백업
+            calendarManager.removeCalendarComponents()
+        } catch (_: Exception) {
         }
     }
 }
@@ -312,19 +428,19 @@ object TransLocal {
         val reIdx = 6371.00877 / 5.0
         val slat1Rad = 30.0 * PI / 180.0
         val slat2Rad = 60.0 * PI / 180.0
-        val olonRad = 126.0 * PI / 180.0
-        val olatRad = 38.0 * PI / 180.0
+        val oLonRad = 126.0 * PI / 180.0
+        val oLatRad = 38.0 * PI / 180.0
 
         val snVal = log(cos(slat1Rad) / cos(slat2Rad), java.lang.Math.E) /
                 log(tan(PI * 0.25 + slat2Rad * 0.5) / tan(PI * 0.25 + slat1Rad * 0.5), java.lang.Math.E)
 
         val sfVal = tan(PI * 0.25 + slat1Rad * 0.5).pow(snVal) * cos(slat1Rad) / snVal
-        val roVal = reIdx * sfVal / tan(PI * 0.25 + olatRad * 0.5).pow(snVal)
+        val roVal = reIdx * sfVal / tan(PI * 0.25 + oLatRad * 0.5).pow(snVal)
 
         var raVal = tan(PI * 0.25 + lat * (PI / 180.0) * 0.5)
         raVal = reIdx * sfVal / raVal.pow(snVal)
 
-        var theta = lon * (PI / 180.0) - olonRad
+        var theta = lon * (PI / 180.0) - oLonRad
         if (theta > PI) theta -= 2.0 * PI
         if (theta < -PI) theta += 2.0 * PI
         theta *= snVal
