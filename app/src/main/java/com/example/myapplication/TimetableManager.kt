@@ -1,8 +1,11 @@
 package com.example.myapplication
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
+import android.view.GestureDetector
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -16,7 +19,10 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Locale
+import java.util.TreeMap
+import kotlin.math.abs
 
 class TimetableManager(private val dataDisplay: TextView) {
 
@@ -24,22 +30,19 @@ class TimetableManager(private val dataDisplay: TextView) {
     private val auth = FirebaseAuth.getInstance()
     private val API_KEY = "4e2e494f4226457aacbad544f2af5675"
 
-    // 📅 급식 기능과 동기화되는 전역 캘린더 변수
     private var currentCalendar: Calendar = Calendar.getInstance()
+    private var gestureDetector: GestureDetector? = null
 
-    // ◀ 이전 날짜 버튼 클릭 시 호출
     fun moveToPrevDay() {
         currentCalendar.add(Calendar.DAY_OF_YEAR, -1)
         fetchTimetable()
     }
 
-    // ▶ 다음 날짜 버튼 클릭 시 호출
     fun moveToNextDay() {
         currentCalendar.add(Calendar.DAY_OF_YEAR, 1)
         fetchTimetable()
     }
 
-    // 시간표 메뉴 진입 시 오늘 날짜로 초기화 후 로드
     fun fetchTodayTimetable() {
         currentCalendar = Calendar.getInstance()
         fetchTimetable()
@@ -53,6 +56,7 @@ class TimetableManager(private val dataDisplay: TextView) {
         }
 
         dataDisplay.text = "시간표 정보를 확인하는 중..."
+        dataDisplay.scrollTo(0, 0) // 날짜 바뀔 때 스크롤 상단 초기화
 
         db.collection("Users").document(myUid).get()
             .addOnSuccessListener { document ->
@@ -61,7 +65,6 @@ class TimetableManager(private val dataDisplay: TextView) {
 
                     Log.d("TimetableRole", "현재 로그인한 유저의 role 필드 값: $role")
 
-                    // 👨‍🏫 권한 분기 로직
                     if (role.uppercase(Locale.ROOT).contains("TEACHER")) {
                         loadTeacherTimetable(myUid)
                     } else {
@@ -81,7 +84,6 @@ class TimetableManager(private val dataDisplay: TextView) {
 
     private fun loadTeacherTimetable(uid: String) {
         val displayDate = SimpleDateFormat("MM월 dd일(E)", Locale.getDefault()).format(currentCalendar.time)
-
         val dayOfWeek = currentCalendar.get(Calendar.DAY_OF_WEEK)
         val dayString = when (dayOfWeek) {
             Calendar.MONDAY -> "월"
@@ -105,8 +107,7 @@ class TimetableManager(private val dataDisplay: TextView) {
                     @Suppress("UNCHECKED_CAST")
                     val todaySchedule = document.get(dayString) as? Map<String, String>
 
-                    var result = "📅 ${displayDate}\n👨‍🏫 선생님 시간표\n"
-                    result += "────────────────────\n\n"
+                    var result = "📅 ${displayDate}\n👨‍🏫 선생님 시간표\n────────────────────\n\n"
 
                     if (todaySchedule != null && todaySchedule.isNotEmpty()) {
                         val sortedSchedule = todaySchedule.toSortedMap()
@@ -120,8 +121,7 @@ class TimetableManager(private val dataDisplay: TextView) {
                 } else {
                     dataDisplay.text = "📅 ${displayDate}\n────────────────────\n\n" +
                             "⚠️ 아직 오늘 시간표가 설정되지 않았습니다!\n\n" +
-                            "💡 현재 시간표 화면을 [꾹~ 누르면]\n" +
-                            "   요일별로 1~7교시 시간표를 설정/수정할 수 있어요."
+                            "💡 화면을 [꾹~ 누르면] 시간표를 설정할 수 있어요."
                 }
             }
             .addOnFailureListener {
@@ -134,10 +134,7 @@ class TimetableManager(private val dataDisplay: TextView) {
         val displayDate = SimpleDateFormat("MM월 dd일(E)", Locale.getDefault()).format(currentCalendar.time)
 
         NeisRetrofitClient.service.getTimetable(
-            key = API_KEY,
-            date = targetDate,
-            grade = grade,
-            classNm = classNm
+            key = API_KEY, date = targetDate, grade = grade, classNm = classNm
         ).enqueue(object : Callback<ResponseBody> {
             override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
                 try {
@@ -153,20 +150,15 @@ class TimetableManager(private val dataDisplay: TextView) {
                             val obj = rowArray.getJSONObject(i)
                             val period = obj.getString("PERIO").toInt()
                             val subject = obj.getString("ITRT_CNTNT")
-
-                            if (!timetableMap.containsKey(period)) {
-                                timetableMap[period] = subject
-                            }
+                            if (!timetableMap.containsKey(period)) timetableMap[period] = subject
                         }
 
                         dataDisplay.gravity = android.view.Gravity.START
-                        var result = "📅 ${displayDate}\n${grade}학년 ${classNm}반 시간표\n"
-                        result += "────────────────────\n\n"
+                        var result = "📅 ${displayDate}\n${grade}학년 ${classNm}반 시간표\n────────────────────\n\n"
                         for ((period, subject) in timetableMap) {
                             result += "  ${period}교시  |  $subject\n\n"
                         }
                         dataDisplay.text = result
-
                     } else {
                         dataDisplay.text = "📅 ${displayDate}\n────────────────────\n\n  수업이 없는 날입니다. ✨"
                     }
@@ -174,59 +166,81 @@ class TimetableManager(private val dataDisplay: TextView) {
                     dataDisplay.text = "데이터 분석 중 오류가 발생했습니다."
                 }
             }
-
             override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
                 dataDisplay.text = "서버 연결 실패"
             }
         })
     }
 
-    // 🔄 [복구 완료] 월~금 스크롤 내리며 일괄 정하는 원본 다이얼로그 로직
-    fun showTeacherInputDialog(context: Context) {
+    // 🚀 시간표 전용 스와이프 리스너 결합 및 세로 스크롤 방해 금지 처리
+    @SuppressLint("ClickableViewAccessibility")
+    fun attachSwipeListener(context: Context) {
+        gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+            private val SWIPE_THRESHOLD = 100
+            private val SWIPE_VELOCITY_THRESHOLD = 150
+
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+                if (e1 == null || e2 == null) return false
+                val diffX = e2.x - e1.x
+                val diffY = e2.y - e1.y
+
+                // 가로 움직임이 세로 움직임보다 확실히 클 때만 날짜 이동 처리
+                if (abs(diffX) > abs(diffY) && abs(diffX) > SWIPE_THRESHOLD && abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                    if (diffX > 0) {
+                        moveToPrevDay() // ◀ 오른쪽 슬라이드: 이전 날짜
+                    } else {
+                        moveToNextDay() // ▶ 왼쪽 슬라이드: 다음 날짜
+                    }
+                    return true
+                }
+                return false
+            }
+
+            override fun onLongPress(e: MotionEvent) {
+                showTeacherInputDialog(context)
+            }
+        })
+
+        dataDisplay.setOnTouchListener { _, event ->
+            gestureDetector?.onTouchEvent(event)
+            // 세로 스크롤(7교시 확인용)을 원활하게 하기 위해 false 리턴해서 터치 이벤트를 완전히 뺏지 않음
+            false
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    fun detachSwipeListener() {
+        dataDisplay.setOnTouchListener(null)
+    }
+
+    private fun showTeacherInputDialog(context: Context) {
         val myUid = auth.currentUser?.uid ?: return
 
+        db.collection("Users").document(myUid).get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.exists()) {
+                    val role = document.getString("role") ?: "STUDENT"
+                    if (role.uppercase(Locale.ROOT).contains("TEACHER")) {
+                        openDialogUI(context, myUid)
+                    } else {
+                        Toast.makeText(context, "🚫 선생님만 사용할 수 있는 기능입니다.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+    }
+
+    private fun openDialogUI(context: Context, myUid: String) {
         val inflater = LayoutInflater.from(context)
         val dialogView = inflater.inflate(R.layout.dialog_teacher_timetable, null)
 
-        // 월요일 EditText 바인딩
-        val monETs = listOf(
-            dialogView.findViewById<EditText>(R.id.et_mon_1), dialogView.findViewById<EditText>(R.id.et_mon_2),
-            dialogView.findViewById<EditText>(R.id.et_mon_3), dialogView.findViewById<EditText>(R.id.et_mon_4),
-            dialogView.findViewById<EditText>(R.id.et_mon_5), dialogView.findViewById<EditText>(R.id.et_mon_6),
-            dialogView.findViewById<EditText>(R.id.et_mon_7)
-        )
-        // 화요일 EditText 바인딩
-        val tueETs = listOf(
-            dialogView.findViewById<EditText>(R.id.et_tue_1), dialogView.findViewById<EditText>(R.id.et_tue_2),
-            dialogView.findViewById<EditText>(R.id.et_tue_3), dialogView.findViewById<EditText>(R.id.et_tue_4),
-            dialogView.findViewById<EditText>(R.id.et_tue_5), dialogView.findViewById<EditText>(R.id.et_tue_6),
-            dialogView.findViewById<EditText>(R.id.et_tue_7)
-        )
-        // 수요일 EditText 바인딩
-        val wedETs = listOf(
-            dialogView.findViewById<EditText>(R.id.et_wed_1), dialogView.findViewById<EditText>(R.id.et_wed_2),
-            dialogView.findViewById<EditText>(R.id.et_wed_3), dialogView.findViewById<EditText>(R.id.et_wed_4),
-            dialogView.findViewById<EditText>(R.id.et_wed_5), dialogView.findViewById<EditText>(R.id.et_wed_6),
-            dialogView.findViewById<EditText>(R.id.et_wed_7)
-        )
-        // 목요일 EditText 바인딩
-        val thuETs = listOf(
-            dialogView.findViewById<EditText>(R.id.et_thu_1), dialogView.findViewById<EditText>(R.id.et_thu_2),
-            dialogView.findViewById<EditText>(R.id.et_thu_3), dialogView.findViewById<EditText>(R.id.et_thu_4),
-            dialogView.findViewById<EditText>(R.id.et_thu_5), dialogView.findViewById<EditText>(R.id.et_thu_6),
-            dialogView.findViewById<EditText>(R.id.et_thu_7)
-        )
-        // 금요일 EditText 바인딩
-        val friETs = listOf(
-            dialogView.findViewById<EditText>(R.id.et_fri_1), dialogView.findViewById<EditText>(R.id.et_fri_2),
-            dialogView.findViewById<EditText>(R.id.et_fri_3), dialogView.findViewById<EditText>(R.id.et_fri_4),
-            dialogView.findViewById<EditText>(R.id.et_fri_5), dialogView.findViewById<EditText>(R.id.et_fri_6),
-            dialogView.findViewById<EditText>(R.id.et_fri_7)
-        )
+        val monETs = listOf(dialogView.findViewById<EditText>(R.id.et_mon_1), dialogView.findViewById(R.id.et_mon_2), dialogView.findViewById(R.id.et_mon_3), dialogView.findViewById(R.id.et_mon_4), dialogView.findViewById(R.id.et_mon_5), dialogView.findViewById(R.id.et_mon_6), dialogView.findViewById(R.id.et_mon_7))
+        val tueETs = listOf(dialogView.findViewById<EditText>(R.id.et_tue_1), dialogView.findViewById(R.id.et_tue_2), dialogView.findViewById(R.id.et_tue_3), dialogView.findViewById(R.id.et_tue_4), dialogView.findViewById(R.id.et_tue_5), dialogView.findViewById(R.id.et_tue_6), dialogView.findViewById(R.id.et_tue_7))
+        val wedETs = listOf(dialogView.findViewById<EditText>(R.id.et_wed_1), dialogView.findViewById(R.id.et_wed_2), dialogView.findViewById(R.id.et_wed_3), dialogView.findViewById(R.id.et_wed_4), dialogView.findViewById(R.id.et_wed_5), dialogView.findViewById(R.id.et_wed_6), dialogView.findViewById(R.id.et_wed_7))
+        val thuETs = listOf(dialogView.findViewById<EditText>(R.id.et_thu_1), dialogView.findViewById(R.id.et_thu_2), dialogView.findViewById(R.id.et_thu_3), dialogView.findViewById(R.id.et_thu_4), dialogView.findViewById(R.id.et_thu_5), dialogView.findViewById(R.id.et_thu_6), dialogView.findViewById(R.id.et_thu_7))
+        val friETs = listOf(dialogView.findViewById<EditText>(R.id.et_fri_1), dialogView.findViewById(R.id.et_fri_2), dialogView.findViewById(R.id.et_fri_3), dialogView.findViewById(R.id.et_fri_4), dialogView.findViewById(R.id.et_fri_5), dialogView.findViewById(R.id.et_fri_6), dialogView.findViewById(R.id.et_fri_7))
 
         val daysMap = mapOf("월" to monETs, "화" to tueETs, "수" to wedETs, "목" to thuETs, "금" to friETs)
 
-        // 🔄 팝업 켜지자마자 기존 월~금 데이터 한꺼번에 로드해서 빈칸 다 채우기
         db.collection("TeacherTimetables").document(myUid).get()
             .addOnSuccessListener { document ->
                 if (document != null && document.exists()) {
@@ -234,42 +248,32 @@ class TimetableManager(private val dataDisplay: TextView) {
                         @Suppress("UNCHECKED_CAST")
                         val daySchedule = document.get(dayName) as? Map<String, String>
                         if (daySchedule != null) {
-                            for (i in 1..7) {
-                                editTexts[i - 1].setText(daySchedule[i.toString()] ?: "")
-                            }
+                            for (i in 1..7) editTexts[i - 1].setText(daySchedule[i.toString()] ?: "")
                         }
                     }
                 }
             }
 
-        // 하나의 저장 버튼으로 일괄 처리
         AlertDialog.Builder(context)
             .setView(dialogView)
             .setPositiveButton("한번에 저장") { _, _ ->
                 val allWeekSchedule = mutableMapOf<String, Any>()
-
-                // 월~금 루프 돌면서 데이터 뽑기
                 for ((dayName, editTexts) in daysMap) {
                     val daySchedule = mutableMapOf<String, String>()
                     for (i in 1..7) {
                         val text = editTexts[i - 1].text.toString().trim()
-                        if (text.isNotEmpty()) {
-                            daySchedule[i.toString()] = text
-                        }
+                        if (text.isNotEmpty()) daySchedule[i.toString()] = text
                     }
                     allWeekSchedule[dayName] = daySchedule
                 }
 
-                // 🚀 파이어베이스에 일주일치 통째로 한 번에 Merge 저장!
                 db.collection("TeacherTimetables").document(myUid)
                     .set(allWeekSchedule, SetOptions.merge())
                     .addOnSuccessListener {
                         Toast.makeText(context, "🗓️ 주간 시간표가 일괄 저장되었습니다!", Toast.LENGTH_SHORT).show()
                         fetchTimetable()
                     }
-                    .addOnFailureListener {
-                        Toast.makeText(context, "저장 실패했습니다.", Toast.LENGTH_SHORT).show()
-                    }
+                    .addOnFailureListener { Toast.makeText(context, "저장 실패했습니다.", Toast.LENGTH_SHORT).show() }
             }
             .setNegativeButton("취소", null)
             .show()

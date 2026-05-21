@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
@@ -7,7 +8,9 @@ import android.text.SpannableString
 import android.text.Spanned
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
+import android.view.GestureDetector
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -22,6 +25,7 @@ import com.google.firebase.firestore.Query
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
 
 class NoticeManager(
     private val context: Context,
@@ -32,11 +36,13 @@ class NoticeManager(
 
     private var currentPage = 1
     private val itemsPerPage = 5
+    private var totalPages = 0 // 💡 제스처 감지를 위해 전역 변수로 승격
     private var allDocuments: List<DocumentSnapshot> = ArrayList()
     private var isCurrentUserTeacher = false
 
     private val currentPageNoticeIds = ArrayList<String>()
     private val currentPageTitles = ArrayList<String>()
+    private var gestureDetector: GestureDetector? = null
 
     fun fetchNotices() {
         dataDisplay.text = "공지사항을 불러오는 중..."
@@ -73,30 +79,28 @@ class NoticeManager(
     private fun renderNoticePage() {
         val parentView = dataDisplay.parent as? ViewGroup ?: return
 
-        // 🧹 기존 동적 뷰 일단 청소
+        // 🧹 기존 동적 선생님 패널 청소
         removeDynamicButton()
 
         currentPageNoticeIds.clear()
         currentPageTitles.clear()
 
-        // 🚨 [핵심 수정] 데이터가 아예 없을 때 예외 처리 메커니즘 전면 전개
         if (allDocuments.isEmpty()) {
-            dataDisplay.text = "📢 [학급 공지사항] (페이지 0 / 0)\n--------------------------\n\n등록된 공지사항이 없습니다."
-
-            // 데이터가 없어도 선생님 권한이거나 페이징 패널 레이아웃 틀 유지를 위해 총 페이지 0으로 강제 진입 유도
-            showTopIntegratedControlPanel(parentView, 0)
+            totalPages = 0
+            dataDisplay.text = "📢 [학급 공지사항]\n--------------------------\n\n등록된 공지사항이 없습니다.\n\n--------------------------\n📄 페이지 0 / 0"
+            showTeacherControlPanel(parentView)
             return
         }
 
-        val totalPages = kotlin.math.ceil(allDocuments.size.toDouble() / itemsPerPage).toInt()
+        totalPages = kotlin.math.ceil(allDocuments.size.toDouble() / itemsPerPage).toInt()
         if (currentPage > totalPages) currentPage = totalPages
 
         val startIndex = (currentPage - 1) * itemsPerPage
         var endIndex = startIndex + itemsPerPage
         if (endIndex > allDocuments.size) endIndex = allDocuments.size
 
-        // 📝 공지사항 본문 타이틀 및 안내 문구 배치
-        val header = "📢 [학급 공지사항] (페이지 $currentPage / $totalPages)\n클릭하면 상세 내용을 볼 수 있습니다.\n--------------------------\n\n"
+        // 📝 상단 헤더 문구 정돈 (지저분한 페이지 표시 제거)
+        val header = " \n 📢 [학급 공지사항]\n💡. 슬라이드로 조작할 수 있어요!\n--------------------------\n\n"
         val fullStringBuilder = StringBuilder(header)
         val clickRegions = ArrayList<Pair<Int, Int>>()
 
@@ -120,6 +124,9 @@ class NoticeManager(
             displayIndex++
         }
 
+        // 💡 [요청 사항] 공지사항 본문 내용의 맨 밑바닥에 페이지 정보 추가하기
+        fullStringBuilder.append("\n--------------------------\n📄 현재 페이지: $currentPage / $totalPages")
+
         val spannableString = SpannableString(fullStringBuilder.toString())
 
         for (i in clickRegions.indices) {
@@ -141,11 +148,15 @@ class NoticeManager(
         dataDisplay.highlightColor = Color.TRANSPARENT
         dataDisplay.text = spannableString
 
-        // 정상 데이터 존재 시 상단 패널 렌더링
-        showTopIntegratedControlPanel(parentView, totalPages)
+        // 선생님 제어 버튼 레이아웃 출력 (페이징 버튼은 제외됨)
+        showTeacherControlPanel(parentView)
     }
 
-    private fun showTopIntegratedControlPanel(parentView: ViewGroup, totalPages: Int) {
+    // 💡 버튼들을 지우고 선생님 전용 [추가/삭제] 기능만 깔끔하게 남긴 관리 패널
+    private fun showTeacherControlPanel(parentView: ViewGroup) {
+        // 선생님이 아니면 상단에 아무것도 띄우지 않음
+        if (!isCurrentUserTeacher) return
+
         val topPanel = LinearLayout(context).apply {
             id = R.id.teacher_button_panel
             tag = "DYNAMIC_TEACHER_PANEL"
@@ -164,96 +175,97 @@ class NoticeManager(
             }
         }
 
-        // [선생님 권한] ➕ 추가 버튼 (데이터 유무 상관없이 무조건 렌더링)
-        if (isCurrentUserTeacher) {
-            val btnAdd = Button(context).apply {
-                text = "➕ 추가"
-                textSize = 12f
-                setBackgroundColor(Color.parseColor("#6200EE"))
-                setTextColor(Color.WHITE)
-                setPadding(10, 10, 10, 10)
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    setMargins(5, 0, 15, 0)
-                }
-                setOnClickListener { showAddNoticeDialog() }
+        // ➕ 공지 추가 버튼
+        val btnAdd = Button(context).apply {
+            text = "➕ 공지 추가"
+            textSize = 12f
+            setBackgroundColor(Color.parseColor("#6200EE"))
+            setTextColor(Color.WHITE)
+            setPadding(10, 10, 10, 10)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                setMargins(5, 0, 10, 0)
             }
-            topPanel.addView(btnAdd)
+            setOnClickListener { showAddNoticeDialog() }
         }
+        topPanel.addView(btnAdd)
 
-        // --- 중앙 순수 페이징 영역 ---
-        val pagingContainer = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-        val btnPrevPage = Button(context).apply {
-            text = "◀"
-            textSize = 13f
-            setPadding(25, 12, 25, 12)
-            // 데이터가 없거나 1페이지면 비활성화
-            isEnabled = totalPages > 0 && currentPage > 1
-            setOnClickListener {
-                if (currentPage > 1) {
-                    currentPage--
-                    renderNoticePage()
-                }
+        // ❌ 공지 삭제 버튼
+        val btnDelete = Button(context).apply {
+            text = "❌ 공지 삭제"
+            textSize = 12f
+            setBackgroundColor(Color.parseColor("#E53935"))
+            setTextColor(Color.WHITE)
+            setPadding(10, 10, 10, 10)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                setMargins(10, 0, 5, 0)
             }
-        }
-
-        val tvPageInfo = TextView(context).apply {
-            text = "  ${if (totalPages == 0) 0 else currentPage} / $totalPages  "
-            textSize = 14f
-            setTextColor(Color.parseColor("#6200EE"))
-            gravity = Gravity.CENTER
-        }
-
-        val btnNextPage = Button(context).apply {
-            text = "▶"
-            textSize = 13f
-            setPadding(25, 12, 25, 12)
-            // 데이터가 없거나 마지막 페이지면 비활성화
-            isEnabled = totalPages > 0 && currentPage < totalPages
-            setOnClickListener {
-                if (currentPage < totalPages) {
-                    currentPage++
-                    renderNoticePage()
-                }
+            isEnabled = totalPages > 0
+            if (totalPages == 0) {
+                setBackgroundColor(Color.GRAY)
             }
+            setOnClickListener { showDeleteSelectDialog() }
         }
-
-        pagingContainer.addView(btnPrevPage)
-        pagingContainer.addView(tvPageInfo)
-        pagingContainer.addView(btnNextPage)
-        topPanel.addView(pagingContainer)
-
-        // [선생님 권한] ❌ 삭제 버튼
-        if (isCurrentUserTeacher) {
-            val btnDelete = Button(context).apply {
-                text = "❌ 삭제"
-                textSize = 12f
-                setBackgroundColor(Color.parseColor("#E53935"))
-                setTextColor(Color.WHITE)
-                setPadding(10, 10, 10, 10)
-                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    setMargins(15, 0, 5, 0)
-                }
-                // 삭제할 데이터가 아예 없을 때는 버튼 비활성화 처리해서 크래시 방지
-                isEnabled = totalPages > 0
-                if (totalPages == 0) {
-                    setBackgroundColor(Color.GRAY)
-                }
-                setOnClickListener { showDeleteSelectDialog() }
-            }
-            topPanel.addView(btnDelete)
-        }
+        topPanel.addView(btnDelete)
 
         val index = parentView.indexOfChild(dataDisplay)
         parentView.addView(topPanel, index)
         topPanel.bringToFront()
+    }
+
+    // 🚀 공지사항 전용 스와이프(슬라이드) 리스너 구현부
+    @SuppressLint("ClickableViewAccessibility")
+    fun attachSwipeListener(context: Context) {
+        gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+            private val SWIPE_THRESHOLD = 100
+            private val SWIPE_VELOCITY_THRESHOLD = 150
+
+            override fun onDown(e: MotionEvent): Boolean {
+                return true // 제스처 이벤트를 가로채기 위해 진입 허용
+            }
+
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, velocityX: Float, velocityY: Float): Boolean {
+                if (e1 == null || e2 == null) return false
+                val diffX = e2.x - e1.x
+                val diffY = e2.y - e1.y
+
+                // 가로 휙 넘기기 조건 매칭
+                if (abs(diffX) > abs(diffY) && abs(diffX) > SWIPE_THRESHOLD && abs(velocityX) > SWIPE_VELOCITY_THRESHOLD) {
+                    if (diffX > 0) {
+                        // ◀ 우측 스와이프: 이전 페이지
+                        if (currentPage > 1) {
+                            currentPage--
+                            renderNoticePage()
+                        } else {
+                            Toast.makeText(context, "첫 번째 페이지입니다.", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        // ▶ 좌측 스와이프: 다음 페이지
+                        if (currentPage < totalPages) {
+                            currentPage++
+                            renderNoticePage()
+                        } else {
+                            Toast.makeText(context, "마지막 페이지입니다.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    return true
+                }
+                return false
+            }
+        })
+
+        dataDisplay.setOnTouchListener { _, event ->
+            gestureDetector?.onTouchEvent(event)
+            false // 7교시 시간표처럼 본문 스크롤 및 링크 클릭 연동을 위해 false 반환
+        }
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    fun Tracy_detachSwipeListener() {
+        // 안전한 분리를 위한 리스너 해제 기능
+    }
+
+    fun detachSwipeListener() {
+        dataDisplay.setOnTouchListener(null)
     }
 
     private fun showNoticeDetailDialog(title: String, content: String, date: String) {

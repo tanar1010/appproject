@@ -9,13 +9,10 @@ import android.location.Location
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.Button
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -51,8 +48,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var profileManager: ProfileManager
     private lateinit var calendarManager: CalendarManager
 
-    private var mealButtonPanel: ViewGroup? = null
-    private var timetableButtonPanel: ViewGroup? = null
+    // 매니저 객체들을 전역으로 관리
+    private lateinit var timetableManager: TimetableManager
+    private lateinit var mealManager: MealManager
 
     private val serviceKey = "859a622fe6b7f612605ae804aa607702fa0ffa900bcf6d0fbd721193b240fe17"
 
@@ -67,6 +65,13 @@ class MainActivity : AppCompatActivity() {
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         profileManager = ProfileManager(this)
         calendarManager = CalendarManager(this, dataDisplay)
+
+        // 매니저 초기화 및 세로 스크롤 활성화
+        timetableManager = TimetableManager(dataDisplay)
+        mealManager = MealManager(dataDisplay)
+
+        // 💡 7교시나 긴 급식 메뉴가 잘리지 않도록 TextView 자체 세로 스크롤 설정
+        dataDisplay.movementMethod = android.text.method.ScrollingMovementMethod()
 
         tvMenuTemp = findViewById(R.id.tv_menu_temp)
         tvMenuDesc = findViewById(R.id.tv_menu_desc)
@@ -129,6 +134,7 @@ class MainActivity : AppCompatActivity() {
         if (noticePanel != null || dataDisplay.text.toString().contains("📢 [학급 공지사항]")) {
             val noticeManager = NoticeManager(this, dataDisplay)
             noticeManager.fetchNotices()
+            noticeManager.attachSwipeListener(this) // 💡 화면 회전 시에도 제스처 리스너 복구
         }
     }
 
@@ -225,15 +231,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupMenuButtons() {
-        val timetableManager = TimetableManager(dataDisplay)
         val noticeManager = NoticeManager(this, dataDisplay)
         val chatManager = ChatManager(this, dataDisplay)
-        val mealManager = MealManager(dataDisplay)
-
-        dataDisplay.setOnLongClickListener {
-            timetableManager.showTeacherInputDialog(this)
-            true
-        }
 
         // 📅 [btn1] 학사일정 버튼
         findViewById<Button>(R.id.btn1)?.setOnClickListener {
@@ -245,114 +244,16 @@ class MainActivity : AppCompatActivity() {
         // 🍱 [btn2] 급식 확인 버튼
         findViewById<Button>(R.id.btn2)?.setOnClickListener {
             clearAllSubFeatures(noticeManager, chatManager)
-
             mealManager.fetchTodayMeal()
-
-            val rootLayout = dataDisplay.parent as? ViewGroup
-            if (rootLayout != null) {
-                val linearLayout = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        topMargin = 20
-                        bottomMargin = 20
-                    }
-                }
-
-                val btnPrev = Button(this).apply {
-                    text = "◀ 이전 날짜"
-                    textSize = 14f
-                    layoutParams = LinearLayout.LayoutParams(250, 110)
-                    setOnClickListener { mealManager.moveToPrevDay() }
-                }
-
-                val spacer = View(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(60, 1)
-                }
-
-                val btnNext = Button(this).apply {
-                    text = "다음 날짜 ▶"
-                    textSize = 14f
-                    layoutParams = LinearLayout.LayoutParams(250, 110)
-                    setOnClickListener { mealManager.moveToNextDay() }
-                }
-
-                linearLayout.addView(btnPrev)
-                linearLayout.addView(spacer)
-                linearLayout.addView(btnNext)
-
-                // dataDisplay 아래쪽에 안정적으로 안착 유도 및 강제 가시성 확보
-                val index = rootLayout.indexOfChild(dataDisplay)
-                if (index >= 0) {
-                    rootLayout.addView(linearLayout, index + 1)
-                } else {
-                    rootLayout.addView(linearLayout)
-                }
-                linearLayout.bringToFront()
-
-                mealButtonPanel = linearLayout
-            }
-
+            mealManager.attachSwipeListener(this) // 👈 급식 전용 스와이프 활성화
             drawerLayout.closeDrawer(GravityCompat.START)
         }
 
-        // ⏱️ [btn3] 시간표 버튼 (UI 짤림/버튼 증발 완전 차단)
+        // ⏱️ [btn3] 시간표 버튼
         findViewById<Button>(R.id.btn3)?.setOnClickListener {
             clearAllSubFeatures(noticeManager, chatManager)
-
             timetableManager.fetchTodayTimetable()
-
-            val rootLayout = dataDisplay.parent as? ViewGroup
-            if (rootLayout != null) {
-                val linearLayout = LinearLayout(this).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply {
-                        topMargin = 20
-                        bottomMargin = 20
-                    }
-                }
-
-                val btnPrev = Button(this).apply {
-                    text = "◀ 이전 날짜"
-                    textSize = 14f
-                    layoutParams = LinearLayout.LayoutParams(250, 110)
-                    setOnClickListener { timetableManager.moveToPrevDay() }
-                }
-
-                val spacer = View(this).apply {
-                    layoutParams = LinearLayout.LayoutParams(60, 1)
-                }
-
-                val btnNext = Button(this).apply {
-                    text = "다음 날짜 ▶"
-                    textSize = 14f
-                    layoutParams = LinearLayout.LayoutParams(250, 110)
-                    setOnClickListener { timetableManager.moveToNextDay() }
-                }
-
-                linearLayout.addView(btnPrev)
-                linearLayout.addView(spacer)
-                linearLayout.addView(btnNext)
-
-                // 가려지는 버그 원천 봉쇄: 정확히 dataDisplay 바로 한 칸 뒤(아래)에 뷰 삽입
-                val index = rootLayout.indexOfChild(dataDisplay)
-                if (index >= 0) {
-                    rootLayout.addView(linearLayout, index + 1)
-                } else {
-                    rootLayout.addView(linearLayout)
-                }
-                linearLayout.bringToFront()
-
-                timetableButtonPanel = linearLayout
-            }
-
+            timetableManager.attachSwipeListener(this) // 👈 시간표 전용 스와이프 활성화
             drawerLayout.closeDrawer(GravityCompat.START)
         }
 
@@ -383,6 +284,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btn_bottom_1)?.setOnClickListener {
             clearAllSubFeatures(noticeManager, chatManager)
             noticeManager.fetchNotices()
+            noticeManager.attachSwipeListener(this) // 👈 💡 [수정 완료] 공지사항 전용 스와이프 활성화!
         }
 
         // 💬 하단 버튼 2 (질의응답/채팅)
@@ -404,17 +306,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun clearAllSubFeatures(noticeManager: NoticeManager, chatManager: ChatManager) {
         noticeManager.removeDynamicButton()
+        noticeManager.detachSwipeListener() // 👈 💡 [수정 완료] 다른 메뉴 이동 시 공지사항 제스처 해제 추가!
         chatManager.removeChatComponents()
 
-        mealButtonPanel?.let { panel ->
-            (panel.parent as? ViewGroup)?.removeView(panel)
-            mealButtonPanel = null
-        }
+        // 다른 기능 메뉴로 진입할 때 모든 스와이프 터치 리스너 해제하여 충돌 완전 방지
+        timetableManager.detachSwipeListener()
+        mealManager.detachSwipeListener()
 
-        timetableButtonPanel?.let { panel ->
-            (panel.parent as? ViewGroup)?.removeView(panel)
-            timetableButtonPanel = null
-        }
+        // 스크롤 뷰가 남아있을 경우를 대비한 완전 청소 리셋
+        dataDisplay.scrollTo(0, 0)
 
         try {
             calendarManager.removeCalendarComponents()
